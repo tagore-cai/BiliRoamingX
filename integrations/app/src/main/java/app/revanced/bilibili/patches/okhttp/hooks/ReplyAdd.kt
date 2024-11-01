@@ -27,7 +27,6 @@ object ReplyAdd : ApiHook() {
         val pictures = content.optJSONArray("pictures")
         val hasPicture = pictures.orEmpty().length() > 0
         val finalMessage = "$message ${if (hasPicture) " [带图]" else ""}".trim()
-        CommentChecker.checkComment(oid, replyId, finalMessage, hasPicture)
         if (Settings.UnlockGif()) {
             content.put("picture_scale", 1.5)
             pictures?.forEach { p ->

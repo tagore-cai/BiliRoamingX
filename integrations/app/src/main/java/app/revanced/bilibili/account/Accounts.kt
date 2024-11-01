@@ -101,7 +101,7 @@ object Accounts {
             } else if (cookieFile.isFile) {
                 cookieFile.fastReadToString()
             } else null
-            if (!account.isNullOrEmpty() && !cookie.isNullOrEmpty()) {
+            if (!account.isNullOrEmpty() && !cookie.isNullOrEmpty()) {  
                 val accountInfo = biliAesDecrypt(account.base64Decode)
                     .toString(Charsets.UTF_8).fromJson<AccessToken>()
                 val cookieInfo = cookie.base64Decode.toString(Charsets.UTF_8)
@@ -157,8 +157,6 @@ object Accounts {
         } else {
             accountInfoCache = null
             Utils.async { getInfo() }
-            if (Utils.isMainProcess())  
-                Utils.async(5000L) { checkUserStatus() }
         }
         if ((isSignOut || isSwitchAccount) && Utils.isMainProcess() && Settings.Skin()) {
             Settings.Skin.save(false)
@@ -170,42 +168,6 @@ object Accounts {
     @JvmStatic
     private var dialogShowing = false
 
-    @JvmStatic
-    private fun checkUserStatus() = runCatching {
-        val mid = Accounts.mid
-        if (mid <= 0) return@runCatching
-        val checkInterval = TimeUnit.HOURS.toMillis(1)
-        val key = "user_status_last_check_time_$mid"
-        val lastCheckTime = cachePrefs.getLong(key, 0L)
-        val current = System.currentTimeMillis()
-        if (lastCheckTime != 0L && current - lastCheckTime < checkInterval)
-            return@runCatching
-        cachePrefs.edit { putLong(key, current) }
-
-        val blockedKey = "user_blocked_$mid"
-       
-            cachePrefs.edit { putBoolean(blockedKey, false) }  
-            userBlocked = false
-            Utils.runOnMainThread {
-                val topActivity = ApplicationDelegate.getTopActivity()
-                if (topActivity != null && !dialogShowing) {
-                    AlertDialog.Builder(topActivity)
-                        .setTitle(Utils.getString("biliroaming_unblocked_title"))
-                        .setMessage(Utils.getString("biliroaming_unblocked_description"))
-                        .setPositiveButton(Utils.getString("biliroaming_reboot_now")) { _, _ ->  
-                            Utils.reboot()
-                        }.create().constraintSize().apply {
-                            setCancelable(false)
-                            setCanceledOnTouchOutside(false)
-                            onDismiss { dialogShowing = false }
-                        }.show()
-                    dialogShowing = true
-                }
-            }
-    }.onFailure {
-        if (it is IllegalArgumentException)
-            throw it
-    }
 }
 
 class PassportChangeReceiver : BroadcastReceiver() {
